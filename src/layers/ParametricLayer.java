@@ -9,9 +9,13 @@ public abstract class ParametricLayer extends Layer {
 	 */
 	private static final long serialVersionUID = 1L;
 	public DoubleMatrix weights;
+	public DoubleMatrix intercepts;
 	transient public DoubleMatrix d_weights;
+	transient public DoubleMatrix d_intercepts;
 	transient private DoubleMatrix delta_weights;
+	transient private DoubleMatrix velocities;
 	
+	public boolean biased = false;
 	public boolean regL2 = false;
 	public double l2_lambda = 0.0;
 	public double reg = 0.0;
@@ -30,7 +34,9 @@ public abstract class ParametricLayer extends Layer {
 			}
 		}
 		
-		this.delta_weights = DoubleMatrix.zeros(this.weights.rows, this.weights.columns);
+		if (this.biased) {
+			this.intercepts.fill(0.01);
+		}
 	}
 	
 	/**
@@ -52,11 +58,32 @@ public abstract class ParametricLayer extends Layer {
 	 * @param momentum - scalar multiple of momentum term
 	 */
 	public void updateWeights(double learning_rate, double momentum) {
+		
+		if (this.delta_weights == null) {
+			this.delta_weights = DoubleMatrix.zeros(this.weights.rows, this.weights.columns);
+		}
+		if (this.velocities == null) {
+			this.velocities = DoubleMatrix.zeros(this.weights.rows, this.weights.columns);
+		}
+		
+//		DoubleMatrix updates = this.d_weights.mul(-learning_rate).add(this.velocities.mul(momentum));
+//		this.velocities = updates;
+//		updates = this.d_weights.mul(-learning_rate).add(this.velocities.mul(momentum));
+//		this.weights.addi(updates);
+		
 		DoubleMatrix new_weights = this.weights.sub(this.d_weights.mul(learning_rate));
 		new_weights.addi(this.delta_weights.mul(momentum));
 		this.delta_weights = new_weights.sub(this.weights);
 		this.weights = new_weights;
-		this.d_weights.fill(0);
+		
+		this.d_weights = this.d_weights.fill(0);
+
+		//Intercepts/biases update
+		if (this.biased) {
+			this.intercepts.subi(this.d_intercepts.mul(learning_rate));
+			this.d_intercepts = this.d_intercepts.fill(0);
+		}
+		
 		if (this.regL2) {
 			this.d_reg.fill(0);
 		}

@@ -5,16 +5,18 @@ import java.io.IOException;
 import java.io.PrintStream;
 import org.jblas.DoubleMatrix;
 import layers.AffineLayer;
+import layers.ReluLayer;
 import layers.SigmoidLayer;
 import loss.Loss;
+import network.NeuralNet;
+import network.Utils;
 
 public class Test {
-	static NeuralNet createNetwork(boolean bipolar) {
+	static NeuralNet createNetwork() {
 		NeuralNet net = new NeuralNet(2);
-		net.addLayer(new AffineLayer(4));
-		net.addLayer(new SigmoidLayer(bipolar));
-		net.addLayer(new AffineLayer(1));
-		net.addLayer(new SigmoidLayer(bipolar));
+		net.addLayer(new AffineLayer(4, true));
+		net.addLayer(new ReluLayer());
+		net.addLayer(new AffineLayer(1, true));
 		net.initializeWeights(0.5);
 		return net;
 	}
@@ -42,7 +44,6 @@ public class Test {
 	}
 	
 	public static void main(String[] args) throws IOException {
-		
 		DoubleMatrix X;
 		DoubleMatrix y;
 		boolean bipolar = true;
@@ -56,23 +57,21 @@ public class Test {
 			y = DoubleMatrix.valueOf("0; 1; 1; 0");
 		}
 		
-		int trials = 1;
-		for (int i = 0; i < trials; i++) {
-			NeuralNet net = createNetwork(bipolar);
-			int epochs = 500;
-			double learning_rate =  0.2;
-			double momentum = 0.9;
-			DoubleMatrix training_data = DoubleMatrix.zeros(epochs, 1);
-			for (int j = 0; j < epochs; j++) {
-				Loss loss = net.train(X, y, learning_rate, momentum);
-				training_data.put(j, 0, loss.value);
-				System.out.println(loss.value);
-				if (loss.value < 0.001) {
-					saveLoss(training_data);
-					break;
-				}
+		NeuralNet net = createNetwork();
+		int epochs = 5000;
+		double learning_rate =  0.01;
+		double momentum = 0.9;
+		DoubleMatrix training_data = DoubleMatrix.zeros(epochs, 1);
+		for (int j = 0; j < epochs; j++) {
+			Loss loss = net.train(X, y, learning_rate, momentum);
+			training_data.put(j, 0, loss.value);
+			System.out.println(loss.value);
+			if (loss.value < 0.001) {
+				saveLoss(training_data);
+				break;
 			}
-			System.out.println(net.forward(X));
 		}
+		System.out.println(net.forward(X));
+		Utils.saveNetwork(net, "myNetwork");
 	}
 }

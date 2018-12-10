@@ -7,9 +7,7 @@ public class AffineLayer extends ParametricLayer {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	public final int units;
-	public int[] weights_rows;
-	
+	public final int units;	
 	
 	/**
 	 * Affine/Dense layer
@@ -19,41 +17,52 @@ public class AffineLayer extends ParametricLayer {
 		this.units = units;
 	}
 	
-	public AffineLayer(int units, double regL2Lambda) {
+	public AffineLayer(int units, boolean biased) {
 		this.units = units;
-		this.regularization(regL2Lambda);
+		this.biased = biased;
 	}
 
 	public int connect(int input_dim) {
 		// Weights matrix is [weights; biases]
-		this.weights = DoubleMatrix.zeros(input_dim + 1, this.units);
-		this.weights_rows = new int[input_dim];
-		for (int c = 0; c < input_dim; c++) { 
-			this.weights_rows[c] = c;
+		this.weights = DoubleMatrix.zeros(input_dim, this.units);
+		if (this.biased) {
+			this.intercepts = DoubleMatrix.zeros(1, this.units);
 		}
+		
 		return this.units;
 	}
 	
 	@Override
-	public DoubleMatrix forward(DoubleMatrix input) {
-		DoubleMatrix biased_input = DoubleMatrix.concatHorizontally(input, DoubleMatrix.ones(input.rows, 1));
-		
+	public DoubleMatrix forward(DoubleMatrix input) {		
 		// Discard bias terms from weights
-		this.d_inputs = this.weights.getRows(this.weights_rows).transpose();
-		this.d_weights = biased_input.transpose();
+		this.d_inputs = this.weights.transpose();
+		this.d_weights = input.transpose();
 		
 		if (this.regL2) {
 			this.reg = (this.l2_lambda/2.0)*this.weights.norm2();
 			this.d_reg = this.weights.mul(this.l2_lambda);
 		}
-		return biased_input.mmul(this.weights);
+		
+		DoubleMatrix output = input.mmul(this.weights);
+		if (this.biased) {
+			this.d_intercepts = DoubleMatrix.ones(1, input.rows);
+			output.addiRowVector(this.intercepts);
+		}
+		
+		return output;
 	}
 	
 	@Override
 	public DoubleMatrix backward(DoubleMatrix grad_output) {
+		//Gradient w.r.t weights
 		this.d_weights = this.d_weights.mmul(grad_output);
 		if (this.regL2) {
 			this.d_weights.addi(this.d_reg);
+		}
+		
+		//Gradient w.r.t intercepts
+		if (this.biased) {
+			this.d_intercepts = this.d_intercepts.mmul(grad_output);
 		}
 		return grad_output.mmul(this.d_inputs);
 	}
@@ -61,7 +70,6 @@ public class AffineLayer extends ParametricLayer {
 	@Override
 	public void initializeWeights(double bound) {
 		super.initializeWeights(bound);
-		this.weights.putRow(this.weights.rows - 1, DoubleMatrix.zeros(1, this.weights.columns));
 	}
 }
  

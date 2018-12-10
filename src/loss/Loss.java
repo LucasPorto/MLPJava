@@ -10,5 +10,5 @@ public class Loss {
 	public Loss(double value, DoubleMatrix gradient) {
 		this.value = value;
 		this.gradient = gradient;
-	}	
+	}
 }
