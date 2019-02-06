@@ -52,7 +52,7 @@ public abstract class ParametricLayer extends Layer {
 	}
 	
 	/**
-	 * Single weight update based on gradient descent.
+	 * Single weight update based on gradient descent with momentum.
 	 * Sets gradients to 0 after execution.
 	 * @param learning_rate - scalar multiple of gradient step
 	 * @param momentum - scalar multiple of momentum term
